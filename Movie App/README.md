@@ -25,7 +25,7 @@ ___
 ___
 ## Screenshots
 
-![Screenshot of project](Movie_App/img/final.png)
+![Screenshot of project](https://raw.githubusercontent.com/varadrz/Projects/main/Movie%20App/img/Final.png)
 
 ___
 1. Clone the repository  
