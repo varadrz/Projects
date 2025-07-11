@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Face Recognition Attendance</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <h1>Face Recognition Based Attendance</h1>
+
+  <div class="camera-box">
+    <img src="{{ url_for('video') }}" id="video-feed">
+    
+    <div id="message-box" class="hidden">
+      <span class="tick hidden" id="tick-icon">✔</span>
+      <span id="message-text"></span>
+    </div>
+  </div>
+
+  <script>
+    function flashBorder() {
+      const video = document.getElementById('video-feed');
+      video.classList.add('flash-border');
+      setTimeout(() => video.classList.remove('flash-border'), 500);
+    }
+
+    function checkMessage() {
+      fetch('/message')
+        .then(res => res.json())
+        .then(data => {
+          const msgBox = document.getElementById('message-box');
+          const msgText = document.getElementById('message-text');
+          const tickIcon = document.getElementById('tick-icon');
+
+          if (data.message) {
+            msgText.textContent = data.message;
+            msgBox.classList.remove('hidden');
+            tickIcon.classList.remove('hidden');
+
+            flashBorder();
+          } else {
+            msgBox.classList.add('hidden');
+            tickIcon.classList.add('hidden');
+          }
+        });
+    }
+
+    setInterval(checkMessage, 1000);
+  </script>
+</body>
+</html>
