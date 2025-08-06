@@ -1,0 +1,17 @@
+.app { text-align: center; font-family: sans-serif; }
+.ticket-list { display: flex; flex-wrap: wrap; gap: 1em; justify-content:center; }
+.ticket { border: 2px solid #222; margin: 0.5em; }
+td.filled { background: #f7d068; font-weight:bold; }
+td.blank { background: #fff; }
+.current-number {
+  font-size: 3em;
+  color: #28a745;
+  margin: 1em;
+}
+.animate-pop { animation: pop 0.4s ease; }
+@keyframes pop {
+  0% { transform: scale(0.5); opacity: 0.5;}
+  100% { transform: scale(1); opacity: 1;}
+}
+.history-grid { display: flex; flex-wrap: wrap; gap: 0.5em; font-size:1.2em;}
+.picker-container {margin:2em auto;}

@@ -1,0 +1,9 @@
+ .header {
+    height: 6;
+    display: flex;
+    align-items: center;
+    background-color: black;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+ }

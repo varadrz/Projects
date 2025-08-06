@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>3D Smart & Vibrant Tambola</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #efefef;
+      --surface: #fff;
+      --text: #333;
+      --accent: #2b7fd2;
+      --highlight: #ffe28c;
+      --crossed: #a4e2be;
+      --roof: #d2b34c;
+    }
+    [data-theme="dark"] {
+      --bg: #181818;
+      --surface: #242424;
+      --text: #eee;
+      --accent: #3d84e6;
+      --highlight: #444;
+      --crossed: #29664a;
+      --roof: #b59b2f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0; padding: 0;
+      transition: background .3s, color .3s;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 2em auto;
+      background: var(--surface);
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+      padding: 2em;
+      position: relative;
+    }
+    h1 { text-align:center; }
+    .tickets-area {
+      display: flex; flex-wrap: wrap;
+      gap: 1em;
+      justify-content:center;
+      perspective: 800px;
+    }
+    .ticket-block {
+      position: relative;
+      width: 260px;
+      transform-style: preserve-3d;
+      transition: transform .4s ease;
+    }
+    .ticket-block:hover {
+      transform: rotateY(10deg) rotateX(5deg) scale(1.03);
+    }
+    /* Roof above each ticket to look like house window */
+    .ticket-block::before {
+      content: '';
+      position: absolute;
+      top: -25px;
+      left: 20%;
+      border-left: 60px solid transparent;
+      border-right: 60px solid transparent;
+      border-bottom: 25px solid var(--roof);
+      transform: translateZ(20px);
+      transition: border-bottom-color .3s;
+    }
+    table.ticket {
+      border-collapse: collapse;
+      margin: .5em;
+      background: var(--surface);
+      border-radius:7px;
+      overflow:hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      transform: translateZ(10px);
+    }
+    table.ticket td {
+      width:36px; height:36px;
+      text-align:center;
+      font-size:1.1em;
+      border: 1px solid var(--roof);
+      background: var(--surface);
+      transition: background .25s;
+    }
+    td.filled { background: var(--highlight); font-weight:bold; }
+    td.crossed {
+      background: var(--crossed) !important;
+      color: var(--surface)!important;
+      animation: crossPop .38s cubic-bezier(.6,1.7,.41,1.14);
+    }
+    @keyframes crossPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    td.blank { background: var(--surface); }
+
+    .gen-btn, .pick-btn, .theme-btn {
+      background: var(--accent);
+      color: var(--surface);
+      border: none;
+      border-radius: 5px;
+      padding: .6em 1.2em;
+      font-size:1em;
+      cursor: pointer;
+      margin: .5em;
+      transition: background .3s;
+    }
+    .pick-btn:disabled { background: #888; cursor: not-allowed; }
+    .number-large {
+      font-size:3em;
+      color: var(--accent);
+      margin: 1em 0;
+      animation: pop .4s;
+    }
+    @keyframes pop { from { transform: scale(0.2); opacity:0; } to { transform: scale(1); opacity:1; }}
+    .history-grid span {
+      background: var(--surface);
+      border:1px solid var(--accent);
+      border-radius:4px;
+      padding:3px 8px;
+      margin:2px;
+    }
+    /* Dark mode toggle button */
+    .theme-btn { position:absolute; top:1em; right:1em; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button class="theme-btn" onclick="toggleTheme()">Toggle Theme</button>
+    <h1>3D Smart & Vibrant Tambola</h1>
+    <div class="tickets-area" id="tickets"></div>
+    <div style="text-align:center; margin-top:2em;">
+      <button class="gen-btn" onclick="generateAllTickets()">Generate 6 Tickets</button>
+      <button class="pick-btn" id="pickBtn" onclick="pickNext()">Pick Next Number</button>
+      <div id="currentNumber" class="number-large"></div>
+    </div>
+    <div class="called-history" style="text-align:center;">
+      <strong>Called Numbers:</strong>
+      <div class="history-grid" id="historyGrid"></div>
+      <div id="allPicked" style="color:red;font-weight:bold;display:none;">All numbers picked!</div>
+    </div>
+  </div>
+
+  <script>
+    // Theme toggle
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+    const saved = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+
+    // Ticket & picker logic
+    let ticketData = [], pickedNumbers = [];
+    const colRanges = [...Array(9)].map((_,i)=>[i*10+1, i*10+10]);
+
+    function generateTicket() {
+      const ticket = Array.from({length:3}, ()=>Array(9).fill(null));
+      let colNums = colRanges.map(
+        ([s,e]) => shuffle([...Array(e-s+1)].map((_,i)=>s+i))
+      );
+      const rowCols = [...Array(3)].map(
+        _ => shuffle([...Array(9).keys()]).slice(0,5)
+      );
+      rowCols.forEach((cols,r)=>
+        cols.forEach(c=> ticket[r][c] = colNums[c].pop())
+      );
+      colNums.forEach((arr,c)=>{
+        const has = ticket.some(r=>r[c]!=null);
+        if(!has) {
+          let r = Math.floor(Math.random()*3);
+          ticket[r][c] = arr.pop();
+          let filled = ticket[r].map((v,i)=>v?i:null).filter(i=>i!==null);
+          let swap = filled[Math.floor(Math.random()*filled.length)];
+          ticket[r][swap] = null;
+        }
+      });
+      return ticket.map(r=> r.map(v=> v||''));
+    }
+
+    function generateAllTickets() {
+      ticketData = [];
+      const container = document.getElementById('tickets');
+      container.innerHTML = '';
+      for(let i=0; i<6; i++){
+        const t = generateTicket();
+        const block = document.createElement('div');
+        block.className = 'ticket-block';
+        block.innerHTML = renderWindow(t);
+        container.append(block);
+        ticketData.push({ nums: t, cells: block.querySelectorAll('td') });
+      }
+      pickedNumbers.forEach(n=> crossAll(n,false));
+    }
+
+    function renderWindow(ticket) {
+      let html = '<table class="ticket">';
+      ticket.forEach(row=>{
+        html += '<tr>' + row.map(v=>
+          <td class="${v? 'filled':''}" data-num="${v}">${v||''}</td>
+        ).join('') + '</tr>';
+      });
+      html += '</table>';
+      return html;
+    }
+
+    function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
+
+    function pickNext(){
+      if(pickedNumbers.length >= 90){ disablePick(); return; }
+      let n;
+      do { n = Math.floor(Math.random()*90)+1 }
+      while(pickedNumbers.includes(n));
+      pickedNumbers.push(n);
+      showCurrent(n);
+      updateHistory();
+      crossAll(n,true);
+      if(pickedNumbers.length === 90) disablePick();
+    }
+
+    function showCurrent(n){
+      const d = document.getElementById('currentNumber');
+      d.textContent = n;
+      d.classList.remove('number-large');
+      void d.offsetWidth;
+      d.classList.add('number-large');
+      speak(n);
+    }
+
+    function updateHistory(){
+      const g = document.getElementById('historyGrid');
+      g.innerHTML = '';
+      pickedNumbers.forEach(n=>{
+        const s = document.createElement('span');
+        s.textContent = n;
+        g.append(s);
+      });
+    }
+
+    function crossAll(num, conf){
+      ticketData.forEach(td=>{
+        td.cells.forEach(cell=>{
+          if(cell.dataset.num == num && !cell.classList.contains('crossed')){
+            cell.classList.remove('filled');
+            cell.classList.add('crossed');
+            if(conf) confetti(cell);
+          }
+        });
+      });
+    }
+
+    function disablePick(){
+      document.getElementById('pickBtn').disabled = true;
+      document.getElementById('allPicked').style.display = 'block';
+    }
+
+    function speak(n){
+      if(!('speechSynthesis' in window)) return;
+      const ones = ["zero","one","two","three","four","five","six","seven","eight","nine","ten"];
+      let text = n < 11 ? ones[n] : n.toString();
+      let u = new SpeechSynthesisUtterance(text);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    }
+
+    function confetti(cell) {
+      const root = document.body;
+      for (let i = 0; i < 15; i++) {
+        const c = document.createElement('div');
+        c.style.position = 'fixed';
+        c.style.width = '8px';
+        c.style.height = '4px';
+        c.style.background = `hsl(${Math.random() * 360}, 80%, 60%)`;
+
+        const { left, top, width, height } = cell.getBoundingClientRect();
+        c.style.left = `${left + width / 2}px`;
+        c.style.top = `${top + height / 2}px`;
+        c.style.opacity = '0.8';
+        c.style.transform = `rotate(${Math.random() * 360}deg)`;
+
+        root.append(c);
+        setTimeout(() => c.remove(), 1000);
+      }
+    }
+
+
+    // initialize
+    generateAllTickets();
+  </script>
+</body>
+</html>

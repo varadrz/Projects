@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tambola Game</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Background Gradient + Floating Assets -->
+  <div class="background">
+    <div class="bg-cover"></div>
+    <img src="assets/cup.png" class="float item-cup1" alt="Cup" />
+    <img src="assets/eraser.png" class="float item-eraser1" alt="Eraser" />
+    <img src="assets/eraser2.png" class="float item-eraser2" alt="Eraser" />
+    <img src="assets/pencil1.png" class="float item-pencil2" alt="Pencil" />
+    <img src="assets/pencil2.png" class="float item-pencil3" alt="Pencil" />
+    <img src="assets/cup.png" class="float item-cup2" alt="Cup of Pencils" />
+  </div>
+
+  <!-- 🎮 Tambola Game UI (Main Layer) -->
+  <div class="container">
+    <h1>Tambola Game</h1>
+
+    <!-- Player Setup -->
+    <div id="setup">
+      <label for="playerCount">Select number of players:</label>
+      <select id="playerCount">
+        <option value="">-- Select --</option>
+        <option value="1">1 Player</option>
+        <option value="2">2 Players</option>
+        <option value="3">3 Players</option>
+        <option value="4">4 Players</option>
+        <option value="5">5 Players</option>
+        <option value="6">6 Players</option>
+      </select>
+      <button id="submitCount">Submit</button>
+
+      <div id="nameInputs"></div>
+      <button id="generateTickets" style="display: none;">Generate Tickets</button>
+    </div>
+
+    <!-- Tickets Display -->
+    <div class="tickets-area" id="tickets"></div>
+
+    <!-- Game Controls (Initially Hidden) -->
+    <div id="gameControls" style="display: none;">
+      <!-- Controls -->
+      <div class="controls">
+        <button id="pick">Pick Next Number</button>
+      </div>
+
+      <!-- Current Number Display -->
+      <div id="current" class="current-number"></div>
+
+      <!-- Number History -->
+      <div class="history">
+        <strong>Called Numbers:</strong>
+        <div id="historyGrid"></div>
+        <div id="done" class="done">All numbers picked!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Congratulation Banner -->
+  <div id="congrats"></div>
+
+  <!-- Script -->
+  <script src="script.js"></script>
+</body>
+</html>
