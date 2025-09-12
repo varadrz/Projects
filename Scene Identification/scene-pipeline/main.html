@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Scene Identification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-center mb-2 text-cyan-400">Advanced Video Scene Analyzer</h1>
+            <p class="text-center text-gray-400 mb-8">Upload a video to analyze its contents. The AI will identify objects, people, and actions within each scene.</p>
+
+            <!-- File Upload Area -->
+            <div id="upload-area" class="border-4 border-dashed border-gray-600 rounded-2xl p-8 md:p-12 text-center cursor-pointer hover:border-cyan-400 transition-colors duration-300 bg-gray-800/50">
+                <input type="file" id="video-upload" class="hidden" accept="video/*">
+                <div id="upload-prompt">
+                    <svg class="mx-auto h-16 w-16 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p class="mt-4 text-lg font-semibold">Drag & Drop your video here</p>
+                    <p class="text-sm text-gray-500">or click to select a file</p>
+                </div>
+                <div id="video-preview-container" class="hidden">
+                     <video id="video-preview" class="max-w-full mx-auto rounded-lg" controls></video>
+                </div>
+            </div>
+
+            <!-- Analysis Controls -->
+            <div class="text-center mt-6">
+                <button id="analyze-button" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105 disabled:bg-gray-600 disabled:cursor-not-allowed disabled:scale-100" disabled>Analyze Video</button>
+            </div>
+
+            <!-- Progress and Status -->
+            <div id="status-area" class="mt-8 text-center hidden">
+                <div class="flex items-center justify-center">
+                    <div id="loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mr-4"></div>
+                    <p id="status-text" class="text-lg font-medium">Analyzing video... Please wait.</p>
+                </div>
+                 <div class="w-full bg-gray-700 rounded-full h-2.5 mt-4">
+                    <div id="progress-bar" class="bg-cyan-400 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-area" class="mt-10 hidden">
+                <h2 class="text-2xl font-bold mb-6 text-cyan-400 border-b-2 border-cyan-400/30 pb-2">Analysis Results</h2>
+                
+                <!-- Summary -->
+                <div class="bg-gray-800/50 p-6 rounded-xl mb-6">
+                    <h3 class="text-xl font-semibold mb-3">Overall Summary</h3>
+                    <p id="overall-summary" class="text-gray-300"></p>
+                </div>
+
+                <!-- Object Counts -->
+                <div class="bg-gray-800/50 p-6 rounded-xl mb-6">
+                    <h3 class="text-xl font-semibold mb-4">Detected Objects & Counts</h3>
+                    <div id="object-counts" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        <!-- Counts will be injected here -->
+                    </div>
+                </div>
+                
+                <!-- Download Button -->
+                <div class="text-center mt-8">
+                    <button id="download-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105">Download Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const videoUpload = document.getElementById('video-upload');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        const videoPreviewContainer = document.getElementById('video-preview-container');
+        const videoPreview = document.getElementById('video-preview');
+        const analyzeButton = document.getElementById('analyze-button');
+        const statusArea = document.getElementById('status-area');
+        const loader = document.getElementById('loader');
+        const statusText = document.getElementById('status-text');
+        const progressBar = document.getElementById('progress-bar');
+        const resultsArea = document.getElementById('results-area');
+        const overallSummary = document.getElementById('overall-summary');
+        const objectCounts = document.getElementById('object-counts');
+        const downloadButton = document.getElementById('download-button');
+
+        let videoFile = null;
+
+        // --- Event Listeners for File Upload ---
+        uploadArea.addEventListener('click', () => videoUpload.click());
+        videoUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                handleFileUpload(file);
+            }
+        });
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => uploadArea.classList.add('border-cyan-400'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => uploadArea.classList.remove('border-cyan-400'), false);
+        });
+
+        uploadArea.addEventListener('drop', (event) => {
+            const file = event.dataTransfer.files[0];
+            if (file) {
+                handleFileUpload(file);
+            }
+        }, false);
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function handleFileUpload(file) {
+            if (!file.type.startsWith('video/')) {
+                alert('Please upload a valid video file.');
+                return;
+            }
+            videoFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                videoPreview.src = e.target.result;
+                uploadPrompt.classList.add('hidden');
+                videoPreviewContainer.classList.remove('hidden');
+                analyzeButton.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- Analysis Logic ---
+        analyzeButton.addEventListener('click', async () => {
+            if (!videoFile) return;
+
+            // Reset UI
+            analyzeButton.disabled = true;
+            resultsArea.classList.add('hidden');
+            statusArea.classList.remove('hidden');
+            statusText.textContent = 'Preparing video for analysis...';
+            progressBar.style.width = '0%';
+            objectCounts.innerHTML = '';
+            overallSummary.textContent = '';
+
+
+            const video = document.createElement('video');
+            video.src = URL.createObjectURL(videoFile);
+
+            video.onloadedmetadata = async () => {
+                const duration = video.duration;
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                let allIdentifiedObjects = {};
+                let frameSummaries = [];
+
+                const captureInterval = 1; // Capture a frame every 1 second
+                const totalFrames = Math.floor(duration / captureInterval);
+
+                for (let i = 0; i < totalFrames; i++) {
+                    const currentTime = i * captureInterval;
+                    video.currentTime = currentTime;
+                    
+                    // Wait for the video frame to be ready
+                    await new Promise(resolve => {
+                        video.onseeked = () => resolve();
+                    });
+
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    const base64ImageData = canvas.toDataURL('image/jpeg').split(',')[1];
+                    
+                    statusText.textContent = `Analyzing frame ${i + 1} of ${totalFrames}...`;
+                    
+                    try {
+                        const analysis = await analyzeFrame(base64ImageData);
+                        if (analysis) {
+                            // Aggregate object counts
+                            analysis.objects.forEach(obj => {
+                                const key = obj.name.toLowerCase();
+                                allIdentifiedObjects[key] = (allIdentifiedObjects[key] || 0) + obj.count;
+                            });
+                            // Store frame summary
+                            frameSummaries.push(`At ${Math.floor(currentTime)}s: ${analysis.description}`);
+                        }
+                    } catch (error) {
+                        console.error(`Error analyzing frame ${i + 1}:`, error);
+                        statusText.textContent = `Error analyzing frame ${i + 1}. Check console for details.`;
+                        // Optionally, you could stop the analysis here.
+                    }
+
+                    const progress = ((i + 1) / totalFrames) * 100;
+                    progressBar.style.width = `${progress}%`;
+                }
+                
+                statusText.textContent = 'Generating final summary...';
+                displayResults(allIdentifiedObjects, frameSummaries);
+                statusArea.classList.add('hidden');
+                resultsArea.classList.remove('hidden');
+                analyzeButton.disabled = false;
+            };
+        });
+
+        async function analyzeFrame(base64ImageData) {
+            const prompt = `Analyze this image from a video. Identify all objects, people (specify male/female and estimate age), and animals. 
+            Provide a short, one-sentence description of the scene.
+            Return a JSON object with two keys:
+            1. "objects": an array of objects, where each object has "name" and "count". Example: [{"name": "car", "count": 2}, {"name": "human_male_adult", "count": 1}]. Use specific names like 'autorickshaw' if applicable.
+            2. "description": a string containing the one-sentence description.`;
+            
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        { inlineData: { mimeType: "image/jpeg", data: base64ImageData } }
+                    ]
+                }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                }
+            };
+
+            const apiKey = ""; // Leave empty, handled by the environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            // Exponential backoff for retries
+            let response;
+            let success = false;
+            let delay = 1000; // start with 1 second
+            for (let i = 0; i < 5; i++) { // Retry up to 5 times
+                try {
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        success = true;
+                        break;
+                    } else if (response.status === 429 || response.status >= 500) {
+                        // Throttling or server error, wait and retry
+                        console.warn(`API call failed with status ${response.status}. Retrying in ${delay / 1000}s...`);
+                        await new Promise(res => setTimeout(res, delay));
+                        delay *= 2; // Double the delay for the next retry
+                    } else {
+                        // Other client-side error, don't retry
+                        throw new Error(`API call failed with status ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error("Fetch error:", error);
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2;
+                }
+            }
+            
+            if (!success) {
+                throw new Error("API call failed after multiple retries.");
+            }
+
+            const result = await response.json();
+
+            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                const jsonText = result.candidates[0].content.parts[0].text;
+                try {
+                    return JSON.parse(jsonText);
+                } catch (e) {
+                    console.error("Failed to parse JSON response:", jsonText);
+                    return null;
+                }
+            } else {
+                console.error("Unexpected API response structure:", result);
+                if (result.promptFeedback && result.promptFeedback.blockReason) {
+                     statusText.textContent = `Analysis blocked: ${result.promptFeedback.blockReason}. Trying next frame.`;
+                }
+                return null;
+            }
+        }
+
+        function displayResults(aggregatedObjects, frameSummaries) {
+            // Display object counts
+            const sortedObjects = Object.entries(aggregatedObjects).sort(([,a],[,b]) => b-a);
+            
+            if(sortedObjects.length === 0){
+                objectCounts.innerHTML = `<p class="col-span-full text-gray-400">No distinct objects were consistently identified.</p>`;
+            } else {
+                sortedObjects.forEach(([name, count]) => {
+                    const objectElement = document.createElement('div');
+                    objectElement.className = 'bg-gray-700 p-3 rounded-lg text-center';
+                    objectElement.innerHTML = `
+                        <p class="font-bold text-lg capitalize">${name.replace(/_/g, ' ')}</p>
+                        <p class="text-cyan-400 text-2xl font-semibold">${count}</p>
+                    `;
+                    objectCounts.appendChild(objectElement);
+                });
+            }
+
+            // Generate and display overall summary
+            // A simple approach is to join the frame summaries. A more advanced approach could use another LLM call.
+            if(frameSummaries.length > 0) {
+                overallSummary.textContent = "The video captures a sequence of scenes. " + frameSummaries.map(s => s.split(': ')[1]).join('. ').substring(0, 1000) + '...';
+            } else {
+                overallSummary.textContent = "Could not generate a summary for the video.";
+            }
+        }
+
+        // --- Download Logic ---
+        downloadButton.addEventListener('click', () => {
+            let reportContent = "Video Scene Analysis Report\n";
+            reportContent += "===========================\n\n";
+            
+            reportContent += "Overall Summary:\n";
+            reportContent += overallSummary.textContent + "\n\n";
+
+            reportContent += "Detected Objects & Total Appearances:\n";
+            const counts = document.querySelectorAll('#object-counts div');
+            if (counts.length > 0) {
+                counts.forEach(div => {
+                    const name = div.querySelector('p:first-child').textContent;
+                    const count = div.querySelector('p:last-child').textContent;
+                    reportContent += `- ${name}: ${count}\n`;
+                });
+            } else {
+                reportContent += "No objects were identified.\n";
+            }
+            
+            const blob = new Blob([reportContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'video_analysis_report.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+    </script>
+</body>
+</html>

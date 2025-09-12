@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Video Scene Analyzer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Upload Your Video</h1>
+  <form id="videoForm" enctype="multipart/form-data">
+    <label for="videoInput" class="drop-area">
+      <span>Drag & drop a video, or click to select a file</span>
+      <input type="file" id="videoInput" accept="video/*" required>
+    </label>
+    <button type="submit">Analyze Video</button>
+  </form>
+  <div id="output" style="display:none;">
+    <h2>Analysis Summary</h2>
+    <div id="summary"></div>
+    <h3>Download Analytics</h3>
+    <a id="downloadLink" href="#" download="scene_analytics.json">Download JSON</a>
+    <pre id="jsonData"></pre>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

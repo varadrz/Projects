@@ -1,0 +1,41 @@
+body {
+  font-family: Arial, sans-serif;
+  padding: 32px;
+  background: #f2f4f9;
+}
+h1, h2, h3 {
+  color: #212152;
+}
+.drop-area {
+  display: block;
+  border: 2px dashed #c9d4ea;
+  padding: 24px;
+  background: #e9f0ff;
+  cursor: pointer;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.drop-area:hover {
+  background: #d0e6fd;
+}
+button {
+  background: #2b4ed6;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#output {
+  margin-top: 32px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px #ddd;
+}
+pre {
+  background: #f7f9fa;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
